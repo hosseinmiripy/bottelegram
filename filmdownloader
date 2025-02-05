@@ -1,0 +1,40 @@
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils import executor
+import logging
+import asyncio
+
+TOKEN = "YOUR_BOT_TOKEN"  # توکن ربات خود را اینجا قرار دهید
+CHANNEL_ID = "@YourChannel"  # آیدی کانال موردنظر برای بررسی عضویت
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
+logging.basicConfig(level=logging.INFO)
+
+# دکمه چک کردن عضویت
+def check_membership_keyboard():
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("بررسی عضویت ✅", callback_data="check_membership"))
+    return keyboard
+
+@dp.message_handler(commands=['start'])
+async def send_welcome(message: types.Message):
+    video_link = "https://your_video_link.mp4"  # لینک ویدئو
+    caption_text = "🎥 برای دریافت فایل این فیلم باید عضو کانال شوید."
+    await message.answer_video(video=video_link, caption=caption_text, reply_markup=check_membership_keyboard())
+
+@dp.callback_query_handler(lambda c: c.data == "check_membership")
+async def check_membership(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    chat_member = await bot.get_chat_member(CHANNEL_ID, user_id)
+    
+    if chat_member.status in ["member", "administrator", "creator"]:
+        file_id = "YOUR_FILE_ID"  # آی‌دی فایل ویدیویی که می‌خواهید ارسال کنید
+        await bot.send_document(user_id, file_id, caption="✅ شما عضو کانال هستید! این هم فایل فیلم.")
+    else:
+        await bot.answer_callback_query(callback_query.id, "❌ هنوز عضو کانال نیستید! لطفاً ابتدا عضو شوید.", show_alert=True)
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.create_task(dp.start_polling())
+    loop.run_forever()
